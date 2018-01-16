@@ -81,7 +81,8 @@
         let json = {
           contract: this.files.contract,
           specification: this.files.specification,
-          coupon: this.files.coupon
+          coupon: this.files.coupon,
+          deliveryCoupon: this.files.deliveryCoupon
         }
         if (this.savePath.length === 0) {
           json.savePath = path.resolve(this.$electron.remote.app.getPath('documents'), this.appName)

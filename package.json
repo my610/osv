@@ -1,8 +1,8 @@
 {
   "name": "osv",
-  "version": "0.0.0",
+  "version": "1.0.1",
   "author": "alexey-m <admin@alexey-m.ru>",
-  "description": "An electron-vue project",
+  "description": "Генерация документов договора",
   "license": "MIT",
   "main": "./dist/electron/main.js",
   "scripts": {
@@ -20,7 +20,7 @@
   },
   "build": {
     "productName": "osv",
-    "appId": "org.simulatedgreg.electron-vue",
+    "appId": "ru.alexey-m.osv.electron-vue",
     "directories": {
       "output": "build"
     },

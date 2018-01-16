@@ -39,7 +39,7 @@
     /* определяем цвет фона панели */
     background: #164f69;
     /* поверх других элементов */
-    z-index: 2000;
+    z-index: 100;
     /* Тень */
     box-shadow: 4px 0px 20px 0px rgba(0, 0, 0, 0.5);
     -moz-box-shadow: 4px 0px 20px 0px rgba(0, 0, 0, 0.5);

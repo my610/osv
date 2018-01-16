@@ -28,6 +28,14 @@
         </span>
       </div>
 
+      <label>Талон доставки</label>
+      <div class="input-group">
+        <input type="text" class="form-control" placeholder="Талон доставки" v-model.trim="files.deliveryCoupon">
+        <span class="input-group-btn">
+          <button class="btn btn-info" type="button" @click="openDialogFile(appData, 3)"><span class="glyphicon glyphicon-file" aria-hidden="true"></span></button>
+        </span>
+      </div>
+
       <h5 class="caption">Директория для сохранения документов</h5>
 
       <label>Директория для сохранения документов</label>
@@ -59,7 +67,8 @@
         files: {
           contract: '',
           specification: '',
-          coupon: ''
+          coupon: '',
+          deliveryCoupon: ''
         },
         savePath: '',
         appName: 'OSV',
@@ -101,6 +110,9 @@
             case 2:
               this.files.coupon = filePaths[0]
               break
+            case 3:
+              this.files.deliveryCoupon = filePaths[0]
+              break
           }
         })
       },
@@ -129,6 +141,7 @@
         this.files.contract = cfg.contract || ''
         this.files.specification = cfg.specification || ''
         this.files.coupon = cfg.coupon || ''
+        this.files.deliveryCoupon = cfg.deliveryCoupon || ''
         this.savePath = cfg.savePath || documents
       }
     }

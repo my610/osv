@@ -83,6 +83,13 @@
         <input type="tel" class="form-control" placeholder="Рабочий телефон" v-model.trim="client.phone.work">
       </div>
 
+      <h5 class="caption">Время и условия доставки</h5>
+
+      <div class="form-group">
+        <input type="text" class="form-control" placeholder="Время и условия доставки"
+               v-model.trim="client.termsOfDelivery">
+      </div>
+
       <h5 class="caption">Приобретаемый товар</h5>
 
       <table class="table table-striped table-hover table-condensed">
@@ -93,6 +100,7 @@
           <th width="100">Цвет</th>
           <th width="100">Цена (руб.)</th>
           <th width="100">Кол-во</th>
+          <th width="75">Скидка</th>
           <th width="50"></th>
         </tr>
         </thead>
@@ -106,6 +114,8 @@
           <td><input type="text" class="form-control text-right" placeholder="руб." v-model.number="item.price"></td>
           <td><input type="number" min="0" class="form-control text-right" placeholder="шт."
                      v-model.number="item.count"></td>
+          <td><input type="number" min="0" max="100" class="form-control text-right" placeholder="%"
+                     v-model.number="item.discount"></td>
           <td class="text-right">
             <button type="submit" class="btn btn-warning" title="Удалить" @click="deleteProduct(index)">X</button>
           </td>
@@ -118,7 +128,8 @@
           </td>
           <td class="text-right"><b>Итого:</b></td>
           <td class="text-center"><b>{{clientPrice}} руб.</b></td>
-          <td colspan="2"><b style="padding-left: 25px;">{{clientCount}} шт.</b></td>
+          <td><b style="padding-left: 25px;">{{clientCount}} шт.</b></td>
+          <td colspan="2"><b style="padding-left: 25px;">{{client.discount.toFixed(2)}} руб.</b></td>
         </tr>
         </tbody>
       </table>
@@ -135,33 +146,53 @@
         <label> <input type="checkbox" v-model="client.need.coupon">Талон на сборку мебели</label>
       </div>
 
+      <div class="checkbox">
+        <label> <input type="checkbox" v-model="client.need.deliveryCoupon">Талон доставки</label>
+      </div>
+
       <button type="submit" class="btn btn-default" @click="generateDocs">Сформировать документы</button>
     </div>
 
     <modal name="runner-tasks" :width="350" height="auto">
-      <h5 style="padding-left: 15px; border-bottom: 1px solid #ccc;color: #428bca;"><b>Генерация документов</b></h5>
-      <div class="container">
-        <div v-if="client.need.contract" class="task">
-          <div v-show="!client.done.contract" class="loading"></div>
-          <div><span v-show="client.done.contract" class="glyphicon glyphicon-ok" aria-hidden="true"></span> Договор
-          </div>
-        </div>
-        <div style="clear:left;"></div>
-        <div v-if="client.need.specification" class="task">
-          <div v-show="!client.done.specification" class="loading"></div>
-          <div><span v-show="client.done.specification" class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+      <h5 class="modal-caption"><b>Генерация документов</b></h5>
+
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1 col-xs-10 col-xs-offset-1" style="margin-bottom: 20px;">
+          <button v-if="client.need.contract" class="btn btn-default btn-block btn-xs"
+                  v-bind:disabled="!client.done.contract"
+                  @click="openFile(dst.contract)"
+                  title="Открыть документ">
+            <span v-show="!client.done.contract" class="loading"></span>
+            <span v-show="client.done.contract" class="glyphicon glyphicon-ok" aria-hidden="true"></span> Договор
+          </button>
+
+          <button v-if="client.need.specification" class="btn btn-default btn-block btn-xs"
+                  v-bind:disabled="!client.done.specification"
+                  @click="openFile(dst.specification)" title="Открыть документ">
+            <span v-show="!client.done.specification" class="loading"></span>
+            <span v-show="client.done.specification" class="glyphicon glyphicon-ok" aria-hidden="true"></span>
             Спецификация
-          </div>
+          </button>
+
+          <button v-if="client.need.coupon" class="btn btn-default btn-block btn-xs"
+                  v-bind:disabled="!client.done.coupon"
+                  @click="openFile(dst.coupon)"
+                  title="Открыть документ">
+            <span v-show="!client.done.coupon" class="loading"></span>
+            <span v-show="client.done.coupon" class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+            Талон на сборку мебели
+          </button>
+
+          <button v-if="client.need.deliveryCoupon" class="btn btn-default btn-block btn-xs"
+                  v-bind:disabled="!client.done.deliveryCoupon"
+                  @click="openFile(dst.deliveryCoupon)" title="Открыть документ">
+            <span v-show="!client.done.deliveryCoupon" class="loading"></span>
+            <span v-show="client.done.deliveryCoupon" class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+            Талон доставки
+          </button>
         </div>
-        <div style="clear:left;"></div>
-        <div v-if="client.need.coupon" class="task">
-          <div v-show="!client.done.coupon" class="loading"></div>
-          <div><span v-show="client.done.coupon" class="glyphicon glyphicon-ok" aria-hidden="true"></span> Талон на
-            сборку мебели
-          </div>
-        </div>
-        <div style="clear:left;"></div>
       </div>
+
     </modal>
   </div>
 </template>
@@ -171,6 +202,7 @@
   import path from 'path'
   import fs from 'fs'
   import {rubles} from 'rubles'
+  import {shell} from 'electron'
 
   export default {
     name: 'client',
@@ -185,20 +217,26 @@
           birthday: '',
           address: '',
           placeWork: '',
+          termsOfDelivery: '',
           products: [],
-          price: 0,
+          price: 0.0,
+          discount: 0.0,
           count: 0,
           doc: {series: '', number: '', date: '', address: ''},
           phone: {home: '', work: '', cell: ''},
-          need: {contract: true, specification: true, coupon: true},
-          done: {contract: false, specification: false, coupon: false}
+          need: {contract: true, specification: true, coupon: true, deliveryCoupon: true},
+          done: {contract: false, specification: false, coupon: false, deliveryCoupon: false}
         },
-        files: {contract: '', specification: '', coupon: ''}
+        files: {contract: '', specification: '', coupon: '', deliveryCoupon: ''},
+        dst: {contract: '', specification: '', coupon: '', deliveryCoupon: ''}
       }
     },
     methods: {
+      openFile (fileName) {
+        shell.openItem(fileName)
+      },
       addProduct () {
-        this.client.products.push({name: '', color: '', price: 0, count: 0})
+        this.client.products.push({name: '', color: '', price: 0, count: 0, discount: 0})
       },
       deleteProduct (index) {
         this.client.products.splice(index, 1)
@@ -208,13 +246,15 @@
         const documents = path.resolve(this.$electron.remote.app.getPath('documents'), this.appName)
         const config = path.resolve(appData, this.appName, 'config.json')
 
-        this.client.done.specification = this.client.done.contract = this.client.done.coupon = false
+        this.client.done.specification = this.client.done.contract = this.client.done.coupon = this.client.done.deliveryCoupon = false
 
         this.$modal.show('runner-tasks')
 
         let data = {
           address: this.client.address,
           fullName: `${this.client.firstName} ${this.client.lastName} ${this.client.patronymic}`,
+          shortName: `${this.client.firstName} ${this.client.lastName[0]}.${this.client.patronymic[0]}.`,
+          termsOfDelivery: this.client.termsOfDelivery,
           birthday: this.client.birthday,
           products: this.client.products,
           phone: this.client.phone,
@@ -224,12 +264,17 @@
           placeWork: this.client.placeWork
         }
 
+        data.products.forEach((item, index) => {
+          item.index = index + 1
+        })
+
         if (fs.existsSync(config)) {
           let json = fs.readFileSync(config)
           let cfg = JSON.parse(json)
           this.files.contract = cfg.contract || ''
           this.files.specification = cfg.specification || ''
           this.files.coupon = cfg.coupon || ''
+          this.files.deliveryCoupon = cfg.deliveryCoupon || ''
           this.savePath = cfg.savePath || documents
         }
 
@@ -239,6 +284,7 @@
           // }, 1500)
           const src = this.files.contract
           const dst = path.resolve(this.savePath, `${data.doc.series}_${data.doc.number}_contract.docx`)
+          this.dst.contract = dst
           try {
             docxRender(src, dst, data)
             this.client.done.contract = true
@@ -250,6 +296,7 @@
         if (this.client.need.specification) {
           const src = this.files.specification
           const dst = path.resolve(this.savePath, `${data.doc.series}_${data.doc.number}_spec.docx`)
+          this.dst.specification = dst
           try {
             docxRender(src, dst, data)
             this.client.done.specification = true
@@ -261,9 +308,22 @@
         if (this.client.need.coupon) {
           const src = this.files.coupon
           const dst = path.resolve(this.savePath, `${data.doc.series}_${data.doc.number}_coupon.docx`)
+          this.dst.coupon = dst
           try {
             docxRender(src, dst, data)
             this.client.done.coupon = true
+          } catch (e) {
+            console.log(e.message)
+          }
+        }
+
+        if (this.client.need.deliveryCoupon) {
+          const src = this.files.deliveryCoupon
+          const dst = path.resolve(this.savePath, `${data.doc.series}_${data.doc.number}_сoupon_2.docx`)
+          this.dst.deliveryCoupon = dst
+          try {
+            docxRender(src, dst, data)
+            this.client.done.deliveryCoupon = true
           } catch (e) {
             console.log(e.message)
           }
@@ -279,17 +339,23 @@
         return this.client.count
       },
       clientPrice () {
-        this.client.price = 0
+        this.client.price = this.client.discount = 0.0
         this.client.products.forEach(item => {
-          this.client.price += item.price * item.count
+          let price = item.price * item.count
+          let discount = (price * item.discount / 100)
+          this.client.price += price - discount
+          this.client.discount += discount
         })
-        return this.client.price
+        return this.client.price.toFixed(2)
       }
     }
   }
 </script>
 
 <style>
+  .v--modal-overlay {
+    background: rgba(0, 0, 0, 0.5);
+  }
   h5.caption {
     color: #428bca;
     font-family: 'Times New Roman', Times, serif;
@@ -301,6 +367,13 @@
     margin: 0 0 15px;
   }
 
+  h5.modal-caption{
+    border-bottom: 1px solid rgb(204, 204, 204);
+    color: white;
+    margin-top: 0;
+    padding: 7px;
+    background-color: #164f69;
+  }
   @keyframes spin {
     0% {
       transform: rotate(0deg);
@@ -319,18 +392,5 @@
     border: .25rem solid rgba(13, 52, 255, 0.2);
     border-top-color: rgb(34, 37, 255);
     animation: spin 1s infinite linear;
-  }
-
-  .task {
-    margin-bottom: 20px;
-  }
-
-  div.task > div > span {
-    color: #4fc08d;
-    margin-right: 5px;
-  }
-
-  div.task > div:nth-last-child(1) {
-    line-height: 16px;
   }
 </style>
